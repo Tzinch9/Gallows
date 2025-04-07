@@ -3,13 +3,5 @@ target/
 out/
 
 *.iml
-.idea/
-
-
-*.log
-
 
 *.properties.local
-
-
-.DS_Store
