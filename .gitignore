@@ -5,3 +5,5 @@ out/
 *.iml
 
 *.properties.local
+
+.idea/
