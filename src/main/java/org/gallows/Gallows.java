@@ -37,7 +37,7 @@ public class Gallows {
                     System.out.println("Выберите один из двух вариантов.");
                     scanner.nextLine();
                 }
-            } catch (Exception e){
+            } catch (NumberFormatException e){
                 System.out.println("Вы вводите что-то другое. Необходимо вводить именно числа.");
                 scanner.nextLine();
             }
