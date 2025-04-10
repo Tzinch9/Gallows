@@ -1,9 +1,10 @@
 package org.gallows;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Gallows {
@@ -17,17 +18,19 @@ public class Gallows {
     private void game(){
 
         while (true){
-            try {
-                System.out.println();
-                System.out.println("""
+
+            System.out.println();
+            System.out.println("""
                         Введите число:
-                        1 - Начать игру.
-                        2 - Выход из игры.
+                        1 - Начать игру
+                        2 - Выход из игры
                         """);
-                int choice = scanner.nextInt();
+            String input = scanner.nextLine().trim();
+            try {
+                int choice = Integer.parseInt(input);
                 if (choice == 1){
+                    listOfErrors.clear();
                     System.out.println("Отлично, давай начнём!");
-                    scanner.nextLine();
                     startGame();
                 } else if (choice == 2){
                     System.out.println();
@@ -35,11 +38,9 @@ public class Gallows {
                     break;
                 } else {
                     System.out.println("Выберите один из двух вариантов.");
-                    scanner.nextLine();
                 }
             } catch (NumberFormatException e){
                 System.out.println("Вы вводите что-то другое. Необходимо вводить именно числа.");
-                scanner.nextLine();
             }
         }
     }
@@ -63,11 +64,15 @@ public class Gallows {
         }
     }
 
-    public void initRandomWord(){
-        randomWord =  words.get(random.nextInt(words.size() - 1));
+    public void initRandomWord() {
+        randomWord = words.get(random.nextInt(words.size()));
     }
 
     private void maskOn(){
+        if (randomWord == null){
+            maskWord = null;
+            return;
+        }
         maskWord = randomWord.replaceAll("[а-яА-Я]", "*");
     }
 
@@ -105,7 +110,7 @@ public class Gallows {
 
             if (listOfErrors.contains(letter)){
                 System.out.println();
-                System.out.println("Вы уже вводили эту букву.Введите другую");
+                System.out.println("Вы уже вводили эту букву. Введите другую.");
                 continue;
             }
 
@@ -127,7 +132,6 @@ public class Gallows {
                 System.out.println("Вас повесили, загаданным словом было: \"" + randomWord + "\"");
                 System.out.println("Начнём новую игру?");
                 break;
-
             }
             if (isWin()){
                 System.out.println();
