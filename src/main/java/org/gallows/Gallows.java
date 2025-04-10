@@ -44,14 +44,22 @@ public class Gallows {
         }
     }
 
-    public void readingFromFile(){
-        try {
-            ClassLoader classLoader = getClass().getClassLoader();
-            Path filePath = Paths.get(Objects.requireNonNull(classLoader.getResource("words.txt")).toURI());
-            words = new ArrayList<>(Files.readAllLines(filePath));
-        } catch (IOException | java.net.URISyntaxException e) {
-            System.out.println("Error reading file " + e.getMessage());
-            words = new ArrayList<>();
+    public void readingFromFile() {
+        words = new ArrayList<>();
+        ClassLoader classLoader = getClass().getClassLoader();
+        try (InputStream inputStream = classLoader.getResourceAsStream("words.txt")) {
+            if (inputStream == null) {
+                System.out.println("Файл не найден.");
+                return;
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    words.add(line.trim());
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Ошибка чтения файла: " + e.getMessage());
         }
     }
 
