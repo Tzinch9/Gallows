@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 
 public class Gallows {
     private List<String> words;
@@ -50,7 +47,7 @@ public class Gallows {
     public void readingFromFile(){
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            Path filePath = Paths.get(classLoader.getResource("words.txt").toURI());
+            Path filePath = Paths.get(Objects.requireNonNull(classLoader.getResource("words.txt")).toURI());
             words = new ArrayList<>(Files.readAllLines(filePath));
         } catch (IOException | java.net.URISyntaxException e) {
             System.out.println("Error reading file " + e.getMessage());
