@@ -25,7 +25,7 @@ java -version
 Если Java не установлена или версия ниже 21, скачайте и установите её [отсюда](https://www.oracle.com/java/technologies/downloads/#java21) 
 (выберите Java 21 для вашей операционной системы) или используйте OpenJDK.
 
-2. Скачать Виселицу можно [тут](https://github.com/DMgen10/Gallows/releases).
+2. Скачать Виселицу можно [тут](https://github.com/DMgen10/Gallows/releases/tag/v1.0.1).
 3. Для запуска выполните:
 ```bash
 java -jar Gallows-1.0.jar
