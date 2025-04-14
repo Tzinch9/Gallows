@@ -8,44 +8,63 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Gallows {
+
+    private static final int START = 1;
+    private static final int QUIT = 2;
+    private static final int MAX_ATTEMPTS = 6;
+    private static final int MIN_ATTEMPTS = 0;
+    private static String MASK_SYMBOL = "*";
+    private final Scanner scanner = new Scanner(System.in);
+    private final Random random = new Random();
+    private final List<String> errors = new ArrayList<>();
+    private final List<String> duplicates = new ArrayList<>();
     private List<String> words;
     private String randomWord;
     private String maskWord;
-    private final Scanner scanner = new Scanner(System.in);
-    private final Random random = new Random();
-    private final List<String> listOfErrors = new ArrayList<>();
+    private int attempts;
 
-    private void game(){
 
-        while (true){
+    public void start() {
+
+        while (true) {
 
             System.out.println();
             System.out.println("""
-                        Введите число:
-                        1 - Начать игру
-                        2 - Выход из игры
-                        """);
+                    Введите число:
+                    1 - Начать игру
+                    2 - Выход из игры
+                    """);
             String input = scanner.nextLine().trim();
-            try {
+
+            if(isNumber(input)) {
                 int choice = Integer.parseInt(input);
-                if (choice == 1){
-                    listOfErrors.clear();
+                if (choice == START) {
+                    errors.clear();
+                    duplicates.clear();
                     System.out.println("Отлично, давай начнём!");
                     startGame();
-                } else if (choice == 2){
+                }
+                if (choice == QUIT) {
                     System.out.println();
                     System.out.println("До скорой встречи!");
                     break;
-                } else {
-                    System.out.println("Выберите один из двух вариантов.");
                 }
-            } catch (NumberFormatException e){
+            } else {
                 System.out.println("Вы вводите что-то другое. Необходимо вводить именно числа.");
             }
         }
     }
 
-    public void readingFromFile() {
+    private boolean isNumber(String input) {
+        try {
+            Integer.parseInt(input);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private void readFromFile() {
         words = new ArrayList<>();
         ClassLoader classLoader = getClass().getClassLoader();
         try (InputStream inputStream = classLoader.getResourceAsStream("words.txt")) {
@@ -64,263 +83,260 @@ public class Gallows {
         }
     }
 
-    public void initRandomWord() {
+    private void initRandomWord() {
         randomWord = words.get(random.nextInt(words.size()));
     }
 
-    private void maskOn(){
-        if (randomWord == null){
-            maskWord = null;
+    private void createMaskWord() {
+        if (randomWord == null) {
+            throw new IllegalStateException("The word is not initialized");
+        }
+        maskWord = MASK_SYMBOL.repeat(randomWord.length());
+    }
+
+    private void beforeTheStart(){
+        reloadATTEMPTS();
+        readFromFile();
+        initRandomWord();
+        createMaskWord();
+        errors.clear();
+        duplicates.clear();
+    }
+
+    private void startGame() {
+
+            beforeTheStart();
+            while (!isGameOver()) {
+                processGuess();
+                if (isLose()) {
+                    printMessageLose();
+                    break;
+                }
+                if (isWin()) {
+                    printMessageWin();
+                    break;
+                }
+            }
+    }
+
+    private void processGuess() {
+        System.out.printf("Введите букву: %n");
+        String letter = scanner.nextLine().toLowerCase();
+        if (letter.length() != 1) {
+            System.out.println("Необходимо вводить одну букву.");
             return;
         }
-        maskWord = randomWord.replaceAll("[а-яА-Я]", "*");
+        if (!isRussianLetter(letter.charAt(0))) {
+            System.out.println("Вводите буквы на русском языке.");
+            return;
+        }
+        if (errors.contains(letter) || duplicates.contains(letter)) {
+            System.out.println("Вы уже вводили эту букву. Введите другую.");
+            return;
+        }
+        if (isSuccessLetterInput(letter)) {
+            handlingSuccessfulLetterInput(letter);
+        } else {
+            handlingUnsuccessfulLetterInput(letter);
+        }
+        System.out.printf("Загаданное слово: \"%s\" %n", maskWord);
+        System.out.printf("Количество оставшихся попыток: %s %n", attempts);
+        showErrors();
     }
 
-    private void startGame(){
-
-        readingFromFile();
-        initRandomWord();
-        maskOn();
-        int attempts = 6;
-
-        while (true){
-            System.out.println();
-            System.out.println("Введите букву:");
-            String letter = scanner.nextLine().toLowerCase();
-
-            System.out.println();
-            System.out.println("Количество оставшихся попыток: " + attempts);
-            showGallows(attempts);
-
-            if (letter.length() != 1){
-                System.out.println();
-                System.out.println("Необходимо вводить одну букву.");
-                continue;
-            }
-
-            if (!isRussianLetter(letter.charAt(0))) {
-                System.out.println();
-                System.out.println("Вводите буквы на русском языке.");
-                continue;
-            }
-
-            System.out.print("Загаданное слово: ");
-            getTheWordAfterGuessingLetter(letter);
-
-
-            if (listOfErrors.contains(letter)){
-                System.out.println();
-                System.out.println("Вы уже вводили эту букву. Введите другую.");
-                continue;
-            }
-
-            if (randomWord.contains(letter)){
-                listOfErrors.add(letter);
-                //"Успех! Буква \"" + letter + "\" присутствует в загаданном слове!"
-                System.out.println();
-                System.out.println("Успех! Буква \"" + letter + "\" присутствует в загаданном слове!");
-
-            } else {
-                listOfErrors.add(letter);
-                attempts--;
-                System.out.println();
-                System.out.println("К сожалению буква \"" + letter + "\" в загаданном слове отсутствует.");
-            }
-
-            if (attempts == 0){
-                System.out.println();
-                System.out.println("Вас повесили, загаданным словом было: \"" + randomWord + "\"");
-                System.out.println("Начнём новую игру?");
-                break;
-            }
-            if (isWin()){
-                System.out.println();
-                System.out.println("Поздравляю! Вы угадали слово!");
-                System.out.println("Начнём новую игру?");
-                break;
-            }
+    private void showErrors() {
+        System.out.println();
+        if (errors.isEmpty()) {
+            System.out.println("Список неправильно введённых букв пуст.");
+        } else {
+            System.out.printf("Список неправильно введённых букв: %s%n", String.join(", ", errors));
         }
     }
 
-    private boolean isWin(){
+    private boolean isSuccessLetterInput(String letter){
+        return randomWord.contains(letter);
+    }
+
+    private void handlingSuccessfulLetterInput(String letter){
+        duplicates.add(letter.toLowerCase());
+        revealLetterInWord(letter);
+        System.out.println();
+        System.out.printf("Успех! Буква '%s' присутствует в загаданном слове. %n", letter);
+    }
+    private void handlingUnsuccessfulLetterInput(String letter){
+        errors.add(letter.toLowerCase());
+        attempts--;
+        revealLetterInWord(letter);
+        System.out.println();
+        System.out.printf("К сожалению буква '%s' в загаданном слове отсутствует. %n", letter);
+        Pictures.printPicture(attempts);
+    }
+
+    private void printMessageWin(){
+        System.out.println();
+        System.out.printf("Поздравляю! Вы угадали слово: \"%s\"! %n",randomWord);
+        System.out.println("Начнём новую игру?");
+    }
+
+    private void printMessageLose(){
+        System.out.println();
+        System.out.printf("Вас повесили, загаданным словом было: \"%s\" %n", randomWord);
+        System.out.println("Начнём новую игру?");
+    }
+
+    private boolean isGameOver(){
+        return isWin() || isLose();
+    }
+
+    private boolean isWin() {
         return maskWord.equals(randomWord);
+    }
+
+    private boolean isLose() {
+        return attempts == MIN_ATTEMPTS;
+    }
+
+    private void reloadATTEMPTS() {
+        attempts = MAX_ATTEMPTS;
+
     }
 
     private boolean isRussianLetter(char ch) {
         return String.valueOf(ch).matches("[А-Яа-яЁё]");
     }
 
-    private void getTheWordAfterGuessingLetter(String letter){
+    private void revealLetterInWord(String letter) {
 
         char[] wordArray = randomWord.toCharArray();
         char[] maskArray = maskWord.toCharArray();
 
         char charLetter = letter.charAt(0);
 
-        for (int i = 0; i < wordArray.length; i++){
-            if (wordArray[i] == charLetter){
+        for (int i = 0; i < wordArray.length; i++) {
+            if (wordArray[i] == charLetter) {
                 maskArray[i] = charLetter;
             }
         }
         maskWord = new String(maskArray);
-        System.out.println(maskWord);
     }
 
+    static class Pictures {
+        private static final String[][] PICTURES = {
+                {
+"    █████████████     ",
+"    █         ███     ",
+"   ████       ███     ",
+"  ██  █       ███     ",
+"   ████       ███     ",
+"███████████   ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"   ███        ███     ",
+"  █    █      ███     ",
+"█        █    ███     ",
+"              ███     ",
+"              ███     ",
+"  ████████████████████"
+},
+                {
+"    █████████████     ",
+"    █         ███     ",
+"   ████       ███     ",
+"  ██  █       ███     ",
+"   ████       ███     ",
+"███████████   ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"   ██         ███     ",
+"  █           ███     ",
+"█             ███     ",
+"              ███     ",
+"              ███     ",
+"  ████████████████████"
+},
+                {
+"    █████████████     ",
+"    █         ███     ",
+"   ████       ███     ",
+"  ██  █       ███     ",
+"   ████       ███     ",
+"███████████   ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"  ████████████████████"
+},
+                {
+"    █████████████     ",
+"    █         ███     ",
+"   ████       ███     ",
+"  ██  █       ███     ",
+"   ████       ███     ",
+"█████         ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"    ██        ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"              ███     ",
+"  ████████████████████"
+},
+                {
+"  █████████████     ",
+"  █         ███     ",
+" ████       ███     ",
+"██  █       ███     ",
+" ████       ███     ",
+"  ██        ███     ",
+"  ██        ███     ",
+"  ██        ███     ",
+"  ██        ███     ",
+"  ██        ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"████████████████████"
+},
+                {
+"  █████████████     ",
+"  █         ███     ",
+" ████       ███     ",
+"██  █       ███     ",
+" ████       ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"            ███     ",
+"████████████████████"
+}, {""}};
 
-    private void showGallows(int attempts){
-        switch (attempts){
-            case 1: System.out.println("""
-                          ████████████████
-                          ████████████████
-                          ██          ████
-                          ███         ████
-                        ██   █        ████
-                        ██   █        ████
-                          ███         ████
-                    ███    █   ███    ████
-                         ████         ████
-                           █          ████
-                           █          ████
-                           █          ████
-                           █          ████
-                          ███         ████
-                        █    ██       ████
-                      █        ██     ████
-                    ██           █    ████
-                                      ████
-                                      ████
-                       █████████████████████████
-                       █████████████████████████
-                    """);
-                break;
-            case 2: System.out.println("""
-                         ████████████████
-                         ████████████████
-                         ██          ████
-                         ███         ████
-                       ██   █        ████
-                       ██   █        ████
-                         ███         ████
-                   ███    █   ███    ████
-                        ████         ████
-                          █          ████
-                          █          ████
-                          █          ████
-                          █          ████
-                         █           ████
-                       █             ████
-                     █               ████
-                   ██                ████
-                                     ████
-                                     ████
-                      █████████████████████████
-                      █████████████████████████
-                   """);
-                break;
-            case 3: System.out.println("""
-                          ████████████████
-                          ████████████████
-                          ██          ████
-                          ███         ████
-                        ██   █        ████
-                        ██   █        ████
-                          ███         ████
-                    ███    █   ███    ████
-                         ████         ████
-                           █          ████
-                           █          ████
-                           █          ████
-                           █          ████
-                                      ████
-                                      ████
-                                      ████
-                                      ████
-                                      ████
-                                      ████
-                       █████████████████████████
-                       █████████████████████████
-               
-                    """);
-                break;
-            case 4: System.out.println("""
-                         ████████████████
-                         ████████████████
-                         ██          ████
-                         ███         ████
-                       ██   █        ████
-                       ██   █        ████
-                         ███         ████
-                   ███    █          ████
-                        ███          ████
-                          █          ████
-                          █          ████
-                          █          ████
-                          █          ████
-                                     ████
-                                     ████
-                                     ████
-                                     ████
-                                     ████
-                                     ████
-                      █████████████████████████
-                      █████████████████████████
-                   """);
-                break;
-            case 5: System.out.println("""
-                       ████████████████
-                       ████████████████
-                       ██          ████
-                       ███         ████
-                     ██   █        ████
-                     ██   █        ████
-                       ███         ████
-                        █          ████
-                        █          ████
-                        █          ████
-                        █          ████
-                        █          ████
-                        █          ████
-                                   ████
-                                   ████
-                                   ████
-                                   ████
-                                   ████
-                                   ████
-                    █████████████████████████
-                    █████████████████████████
-                    """);
-                break;
-            case 6: System.out.println("""
-                      ████████████████
-                      ████████████████
-                      ██          ████
-                      ███         ████
-                    ██   █        ████
-                    ██   █        ████
-                      ███         ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                                  ████
-                   █████████████████████████
-                   █████████████████████████
-                   """);
-                break;
-            default:
-                break;
+        private static void printPicture(int numPicture) {
+            String[] picture = PICTURES[numPicture];
+
+            for (String line : picture) {
+                System.out.println(line);
+            }
         }
-    }
-
-    public static void main(String[] args) {
-        Gallows gallows = new Gallows();
-        gallows.game();
     }
 }
